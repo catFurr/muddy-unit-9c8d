@@ -94,3 +94,8 @@ export const WETH_ABI = [
     // Unwrap ETH
     'function withdraw(uint wad) public',
 ]
+
+export const PERMIT2_ABI = [
+    // View allowance
+    'function allowance(address, address, address) external view returns (uint160, uint48, uint48)',
+]

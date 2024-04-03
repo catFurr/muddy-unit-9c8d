@@ -1,9 +1,9 @@
 
 import { TypedDataDomain, Wallet, ethers } from 'ethers'
-import { AllowanceProvider, AllowanceTransfer, PERMIT2_ADDRESS, PermitSingle } from '@uniswap/permit2-sdk'
+import { AllowanceTransfer, PERMIT2_ADDRESS, PermitSingle } from '@uniswap/permit2-sdk'
 import { Permit2Permit } from '@uniswap/universal-router-sdk/dist/utils/inputTokens'
 
-import { ERC20_ABI } from './constants'
+import { ERC20_ABI, PERMIT2_ABI } from './constants'
 import { toDeadline, toReadableAmount } from './utils'
 import { SwapConfiguration } from './UniversalRouter'
 import { UNIVERSAL_ROUTER_ADDRESS } from '@uniswap/universal-router-sdk'
@@ -14,17 +14,18 @@ export async function getPermitSingle(config: SwapConfiguration, wallet: Wallet)
     const tokenAddress = config.inputToken.address
     const spenderAddress = UNIVERSAL_ROUTER_ADDRESS(config.env.chainId)
 
-    const nonce = await wallet.getNonce()
-    // const allowanceProvider = new AllowanceProvider(wallet.provider, PERMIT2_ADDRESS)
-    // const { amount: permitAmount, expiration, nonce } = await allowanceProvider.getAllowanceData(tokenAddress, wallet.address, spenderAddress);
+    const permit2Contract = new ethers.Contract(
+        PERMIT2_ADDRESS,
+        PERMIT2_ABI,
+        wallet
+    )
 
+    const [ permitAmount, expiration, nonce ] = await permit2Contract.allowance(wallet.address, tokenAddress, spenderAddress)
     // Check amount/expiration here to see if you are already permitted -
     // May not need to generate a new signature.
     // if (permitAmount >= amount && expiration > Date.now()) {
     //     return false
     // }
-    // console.log("permitAmount: ", toReadableAmount(permitAmount, config.inputToken))
-    // console.log("expiration: ", expiration)
 
     const newPermitSingle: PermitSingle = {
         details: {
@@ -32,7 +33,7 @@ export async function getPermitSingle(config: SwapConfiguration, wallet: Wallet)
             amount: config.amountIn,
             // You may set your own deadline - we use 30 days.
             expiration: toDeadline(config.permitExpiration),
-            nonce,
+            nonce: BigInt(nonce),
         },
         spender: spenderAddress,
         // You may set your own deadline - we use 30 minutes.

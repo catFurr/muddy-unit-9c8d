@@ -1,11 +1,11 @@
 
 import { ethers } from 'ethers'
-import { Percent, Token } from '@uniswap/sdk-core'
+import { Percent, Token, ChainId } from '@uniswap/sdk-core'
 import { FeeAmount } from '@uniswap/v3-sdk'
 import { SwapRouter, UNIVERSAL_ROUTER_ADDRESS } from '@uniswap/universal-router-sdk'
 
-import { USDT_TOKEN, WETH_TOKEN } from './constants'
-import { displayTrade, getCurrencyBalance, toReadableAmount, wrapETH } from './utils'
+import { USDC_TOKEN, USDT_TOKEN, WBTC_TOKEN, WETH_TOKEN } from './constants'
+import { displayTrade, getCurrencyBalance, getTokenFromString, toReadableAmount, wrapETH } from './utils'
 import { approvePermit2, getPermitSingle } from './permit2'
 import { createRoute, createTrade } from './v3SinglePoolTrade'
 import { Wallet } from 'ethers'
@@ -25,9 +25,9 @@ export interface SwapConfiguration {
 	poolFee: FeeAmount;
 
     slippageTolerance: Percent;
-    txDeadline: number;
-    permitExpiration: number;
-    permitSigExpiration: number;
+    txDeadline: bigint;
+    permitExpiration: bigint;
+    permitSigExpiration: bigint;
 
     // v2 API
     autoApprovePermit2?: boolean;
@@ -38,24 +38,6 @@ export interface SwapConfiguration {
     // maxFeePerGas: number;
     // maxPriorityFeePerGas: number;
     // maxGasLimit: number;
-}
-
-function validateInput(config: SwapConfiguration) {
-    // Safety checks
-    if (!config.env.rpcUrl) {
-        console.error("RPC URL is invalid!")
-        return false
-    }
-    if (!config.env.privateKey) {
-        console.error("Private Key is invalid!")
-        return false
-    }
-    if (config.inputToken.equals(config.outputToken)) {
-        console.error("Input and Output Tokens cannot be same!")
-        return false
-    }
-
-    return true
 }
 
 async function confirmInputTokens(config: SwapConfiguration, inputTokenBalance: bigint, wallet: Wallet) {
@@ -91,8 +73,68 @@ async function confirmInputTokens(config: SwapConfiguration, inputTokenBalance: 
     return true
 }
 
+
+// Use the formdata to populate the SwapConfiguration
+export function makeConfig(formdata: FormData) {
+    const privateKey = formdata.get("privateKey")?.toString() || ""
+    const rpcUrl = formdata.get("rpcUrl")?.toString() || ""
+    const chainId = (formdata.get("ChainId")?.toString().toUpperCase() as keyof typeof ChainId) || "MAINNET"
+
+    const amountIn = formdata.get("amountIn")?.toString() || "0" // Value in readable format
+    const inputToken = getTokenFromString(formdata.get("inputToken")?.toString())
+    const outputToken = getTokenFromString(formdata.get("outputToken")?.toString())
+    if (!inputToken || !outputToken) throw new Error("Invalid input or output Token(s)!")
+
+    const poolFee = (formdata.get("poolFee")?.toString().toUpperCase() as keyof typeof FeeAmount) || "MEDIUM"
+    const slippageTolerance = formdata.get("slippageTolerance")?.toString() || "50"  // 50 bips, or 0.50%
+    const txDeadline = formdata.get("txDeadline")?.toString() || (1000 * 60 * 20).toString()  // 20 minutes
+
+    const permitExpiration = formdata.get("permitExpiration")?.toString() || (1000 * 60 * 60 * 24 * 30).toString()  // 30 days
+    const permitSigExpiration = formdata.get("permitSigExpiration")?.toString() || (1000 * 60 * 30).toString()  // 30 minutes
+
+    const autoApprovePermit2 = formdata.get("autoApprovePermit2")?.toString().toUpperCase() === "TRUE"
+    const permit2ApprovalAmount = formdata.get("permit2ApprovalAmount")?.toString() || ethers.MaxUint256.toString()  // ethers.MaxUint256
+    const autoWrapETH = formdata.get("autoWrapETH")?.toString().toUpperCase() === "TRUE"
+
+    const config: SwapConfiguration = {
+        env: {
+            privateKey: privateKey,
+            rpcUrl: rpcUrl,
+            chainId: ChainId[chainId]
+        },
+        inputToken: inputToken,
+        outputToken: outputToken,
+        amountIn: ethers.parseUnits(amountIn, inputToken.decimals),  // Value in readable format
+        poolFee: FeeAmount[poolFee],  // FeeAmount.MEDIUM,
+        slippageTolerance: new Percent(slippageTolerance, 10_000),  // 50 bips, or 0.50%
+        txDeadline: BigInt(txDeadline),  // 20 minutes
+
+        permitExpiration: BigInt(permitExpiration),  // 30 days
+        permitSigExpiration: BigInt(permitSigExpiration),  // 30 minutes
+
+        autoApprovePermit2: autoApprovePermit2,  // false
+        permit2ApprovalAmount: BigInt(permit2ApprovalAmount),  // ethers.MaxUint256
+        autoWrapETH: autoWrapETH  // false
+    }
+
+    // Safety checks
+    if (!config.env.rpcUrl) {
+        throw new Error("RPC URL is invalid!")
+    }
+    if (!config.env.privateKey) {
+        throw new Error("Private Key is invalid!")
+    }
+    if (config.inputToken.equals(config.outputToken)) {
+        throw new Error("Input and Output Tokens cannot be same!")
+    }
+    if (config.amountIn <= BigInt(0)) {
+        throw new Error("Input amount must be greater than 0")
+    }
+
+    return config
+}
+
 export async function swapTokens(CurrentConfig: SwapConfiguration) {
-    if (!validateInput(CurrentConfig)) return false
     console.log("Using RPC URL: ", CurrentConfig.env.rpcUrl)
     // Create a wallet using private key
     const wallet = new ethers.Wallet(
@@ -106,7 +148,7 @@ export async function swapTokens(CurrentConfig: SwapConfiguration) {
     const inputTokenBalance = BigInt(await getCurrencyBalance(wallet, CurrentConfig.inputToken))
     console.log("Input token balance: ", toReadableAmount(inputTokenBalance, CurrentConfig.inputToken))
 
-    if (!confirmInputTokens(CurrentConfig, inputTokenBalance, wallet)) return false
+    if (!await confirmInputTokens(CurrentConfig, inputTokenBalance, wallet)) return false
 
     // Get the user's balance for output Token
     const outputTokenBalance = BigInt(await getCurrencyBalance(wallet, CurrentConfig.outputToken))

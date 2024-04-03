@@ -7,9 +7,14 @@ import {
     MAX_DECIMALS,
     MAX_FEE_PER_GAS,
     MAX_PRIORITY_FEE_PER_GAS,
+    USDC_TOKEN,
+    USDT_TOKEN,
+    WBTC_TOKEN,
     WETH_ABI,
-    WETH_CONTRACT_ADDRESS
+    WETH_CONTRACT_ADDRESS,
+    WETH_TOKEN
 } from './constants'
+import { SwapConfiguration } from './UniversalRouter'
 
 
 export function fromReadableAmount(amount: number, decimals: number) {
@@ -17,6 +22,13 @@ export function fromReadableAmount(amount: number, decimals: number) {
 }
 
 export const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
+export function getTokenFromString(value: string | undefined) {
+    const tokensList = [WETH_TOKEN, USDT_TOKEN, USDC_TOKEN, WBTC_TOKEN]
+    return tokensList.find((el) => {
+        return el.address === value || el.symbol === value
+    })
+}
 
 // Helper function - for development only
 // wraps ETH
@@ -32,8 +44,8 @@ export async function wrapETH(wallet: Wallet, eth: bigint) {
         value: eth,
         from: wallet.address,
         to: WETH_CONTRACT_ADDRESS,
-        maxFeePerGas: MAX_FEE_PER_GAS,
-        maxPriorityFeePerGas: MAX_PRIORITY_FEE_PER_GAS,
+        // maxFeePerGas: MAX_FEE_PER_GAS,
+        // maxPriorityFeePerGas: MAX_PRIORITY_FEE_PER_GAS,
     }
 
     const tx = await wallet.sendTransaction(transaction)
@@ -76,8 +88,8 @@ export function displayTrade(trade: Trade<Currency, Currency, TradeType>) {
 * Permit2 expresses expirations as deadlines, but JavaScript usually uses milliseconds,
 * so this is provided as a convenience function.
 */
-export function toDeadline(expiration: number): number {
-    return Math.floor((Date.now() + expiration) / 1000)
+export function toDeadline(expiration: bigint): bigint {
+    return (BigInt(Date.now()) + expiration) / BigInt(1000)
 }
 
 // 1 network call

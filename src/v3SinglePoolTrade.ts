@@ -1,3 +1,4 @@
+import JSBI from 'jsbi'
 import { Wallet, ethers } from 'ethers'
 import { TradeType, CurrencyAmount, Token } from '@uniswap/sdk-core'
 import { Pool, Route, TickMath, TICK_SPACINGS, Trade as V3TradeSDK, computePoolAddress, nearestUsableTick } from '@uniswap/v3-sdk'
@@ -32,8 +33,8 @@ async function getPool(wallet: Wallet, config: SwapConfiguration) {
         poolContract.slot0(),
     ])
 	let { sqrtPriceX96, tick } = slot0
-	liquidity = BigInt(liquidity.toString())
-	sqrtPriceX96 = BigInt(sqrtPriceX96.toString())
+	liquidity = JSBI.BigInt(liquidity.toString())
+	sqrtPriceX96 = JSBI.BigInt(sqrtPriceX96.toString())
 
 	const pool = new Pool(
 		config.inputToken,
@@ -50,7 +51,7 @@ async function getPool(wallet: Wallet, config: SwapConfiguration) {
 			},
 			{
 				index: nearestUsableTick(TickMath.MAX_TICK, TICK_SPACINGS[config.poolFee]),
-				liquidityNet: liquidity * BigInt('-1'),
+				liquidityNet: JSBI.multiply(liquidity, JSBI.BigInt('-1')),
 				liquidityGross: liquidity,
 			},
 	  	]
@@ -86,7 +87,7 @@ export async function createTrade(route: Route<Token, Token>, config: SwapConfig
 	const options: SwapOptions = {
 		inputTokenPermit: permit,
 		slippageTolerance: config.slippageTolerance,
-		deadlineOrPreviousBlockhash: toDeadline(config.txDeadline),
+		deadlineOrPreviousBlockhash: toDeadline(config.txDeadline).toString(),
 		// recipient: ""
 	}
 

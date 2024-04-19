@@ -14,7 +14,6 @@ import {
     WETH_CONTRACT_ADDRESS,
     WETH_TOKEN
 } from './constants'
-import { SwapConfiguration } from './UniversalRouter'
 
 
 export function fromReadableAmount(amount: number, decimals: number) {
@@ -28,29 +27,6 @@ export function getTokenFromString(value: string | undefined) {
     return tokensList.find((el) => {
         return el.address === value || el.symbol === value
     })
-}
-
-// Helper function - for development only
-// wraps ETH
-export async function wrapETH(wallet: Wallet, eth: bigint) {
-    const wethContract = new ethers.Contract(
-        WETH_CONTRACT_ADDRESS,
-        WETH_ABI,
-        wallet
-    )
-
-    const transaction = {
-        data: wethContract.interface.encodeFunctionData('deposit'),
-        value: eth,
-        from: wallet.address,
-        to: WETH_CONTRACT_ADDRESS,
-        // maxFeePerGas: MAX_FEE_PER_GAS,
-        // maxPriorityFeePerGas: MAX_PRIORITY_FEE_PER_GAS,
-    }
-
-    const tx = await wallet.sendTransaction(transaction)
-    const receipt = await tx.wait();
-    return !(receipt?.status === 0)
 }
 
 /**
@@ -90,18 +66,4 @@ export function displayTrade(trade: Trade<Currency, Currency, TradeType>) {
 */
 export function toDeadline(expiration: bigint): bigint {
     return (BigInt(Date.now()) + expiration) / BigInt(1000)
-}
-
-// 1 network call
-// code to easily connect to and get information from a wallet on chain
-export async function getCurrencyBalance(wallet: Wallet, token: Token) {
-    // Get currency otherwise
-    const ERC20Contract = new ethers.Contract(
-        token.address,
-        ERC20_ABI,
-        wallet
-    )
-    const tokenBalance: string = await ERC20Contract.balanceOf(wallet.address)
-
-    return tokenBalance
 }

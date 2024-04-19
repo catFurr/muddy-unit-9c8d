@@ -8,11 +8,8 @@
  * Learn more at https://developers.cloudflare.com/workers/
  */
 
-import { ethers } from "ethers";
-import { ChainId, Percent } from '@uniswap/sdk-core'
-import { FeeAmount } from '@uniswap/v3-sdk'
-import { USDT_TOKEN, WETH_TOKEN } from "./constants";
-import { SwapConfiguration, makeConfig, swapTokens } from "./UniversalRouter";
+import { swapTokens } from "./UniversalRouter";
+import { makeConfig } from "./core";
 
 export interface Env {
 	// Example binding to KV. Learn more at https://developers.cloudflare.com/workers/runtime-apis/kv/
@@ -33,12 +30,24 @@ export interface Env {
 
 export default {
 	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-		const formdata = await request.formData()
-		const config = makeConfig(formdata)
+		const RES_BAD_REQUEST = new Response("Request does not match criteria!", { status: 400, statusText: "Bad Request" })
+		const RES_SRVR_ERROR = new Response("Failed", { status: 500, statusText: "Server Error!" });
 
-		const res = await swapTokens(config)
-		if (!res) return new Response("Swap Failed!", { status: 500, statusText: "Server Error" });
+		// Some checks
+		if (request.method != "POST") return RES_BAD_REQUEST
+		if (request.headers.get("content-type") != "application/x-www-form-urlencoded") return RES_BAD_REQUEST
+
+		const messageArray = ["Init!"]
+		try {
+			const formdata = await request.formData()
+			const config = makeConfig(formdata)
+
+			await swapTokens(config, messageArray)
+		} catch(error) {
+			console.log(messageArray)
+			return new Response(error, { status: 500, statusText: "Server Error" });
+		}
 
 		return new Response('Swap Successful!');
-	},
+	}
 };

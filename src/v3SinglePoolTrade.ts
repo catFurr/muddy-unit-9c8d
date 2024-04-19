@@ -7,9 +7,9 @@ import { SwapOptions, UniswapTrade } from '@uniswap/universal-router-sdk'
 import { Permit2Permit } from '@uniswap/universal-router-sdk/dist/utils/inputTokens'
 import IUniswapV3PoolABI from '@uniswap/v3-core/artifacts/contracts/interfaces/IUniswapV3Pool.sol/IUniswapV3Pool.json'
 
-import { SwapConfiguration } from './UniversalRouter'
 import { POOL_FACTORY_CONTRACT_ADDRESS } from './constants'
 import { toDeadline } from './utils'
+import { SwapConfiguration } from './core'
 
 
 // 2 network calls
@@ -90,8 +90,6 @@ export async function createTrade(route: Route<Token, Token>, config: SwapConfig
 		deadlineOrPreviousBlockhash: toDeadline(config.txDeadline).toString(),
 		// recipient: ""
 	}
-
-	console.log("Expected output tokens: ", newTrade.outputAmount.numerator.toString())
 
 	const routerTrade = new UniswapTrade(
 		new RouterTrade({

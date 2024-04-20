@@ -15,11 +15,12 @@ import { SwapConfiguration } from './core'
 // 2 network calls
 async function getPool(wallet: Wallet, config: SwapConfiguration) {
     const currentPoolAddress = computePoolAddress({
-        factoryAddress: POOL_FACTORY_CONTRACT_ADDRESS,
+        factoryAddress: POOL_FACTORY_CONTRACT_ADDRESS(config.env.chainId),
         tokenA: config.inputToken,
         tokenB: config.outputToken,
         fee: config.poolFee
     })
+	console.log(currentPoolAddress)
 
     const poolContract = new ethers.Contract(
         currentPoolAddress,

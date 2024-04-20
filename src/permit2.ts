@@ -60,15 +60,16 @@ export async function getPermitSingle(config: SwapConfiguration, wallet: Wallet)
 
 // 1 view call
 // 1 transaction - min. 4 network calls
-export async function approvePermit2(config: SwapConfiguration, wallet: Wallet) {
-    const messageArray = []
+export async function approvePermit2(config: SwapConfiguration, wallet: Wallet, messageArray: Array<string>) {
     const tokenContract = new ethers.Contract(
         config.inputToken.address,
         ERC20_ABI,
         wallet
     )
 
-    const allowance = BigInt(await tokenContract.allowance(wallet.address, PERMIT2_ADDRESS))
+    const allowance_data = await tokenContract.allowance(wallet.address, PERMIT2_ADDRESS)
+    messageArray.push(String(allowance_data))
+    const allowance = BigInt(allowance_data)
     messageArray.push("Current Permit2 allowance: ", toReadableAmount(allowance, config.inputToken))
 
     // If we already have enough allowance

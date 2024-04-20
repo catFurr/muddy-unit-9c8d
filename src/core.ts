@@ -2,8 +2,8 @@ import { Wallet, ethers } from "ethers";
 import { Percent, Token, ChainId } from '@uniswap/sdk-core'
 import { FeeAmount } from '@uniswap/v3-sdk'
 
-import { ERC20_ABI, WETH_ABI, WETH_CONTRACT_ADDRESS } from "./constants";
-import { getTokenFromString } from "./utils";
+import { ERC20_ABI, WETH_TOKEN } from "./constants";
+import { getTokenFromAddr } from "./utils";
 
 export interface EnvironmentConfig {
     privateKey: string
@@ -41,9 +41,9 @@ export function makeConfig(formdata: FormData) {
     const rpcUrl = formdata.get("rpcUrl")?.toString() || ""
     const chainId = ChainId[(formdata.get("ChainId")?.toString().toUpperCase() as keyof typeof ChainId) || "MAINNET"]
 
-    const inputToken = getTokenFromString(formdata.get("inputToken")?.toString())
+    const inputToken = getTokenFromAddr(formdata.get("inputToken")?.toString(), chainId)
     const amountIn = ethers.parseUnits(formdata.get("amountIn")?.toString() || "0", inputToken?.decimals)
-    const outputToken = getTokenFromString(formdata.get("outputToken")?.toString())
+    const outputToken = getTokenFromAddr(formdata.get("outputToken")?.toString(), chainId)
     const poolFee = FeeAmount[(formdata.get("poolFee")?.toString().toUpperCase() as keyof typeof FeeAmount) || "MEDIUM"]
 
     const slippageTolerance = new Percent(formdata.get("slippageTolerance")?.toString() || "50", 10_000)  // 50 bips, or 0.50%
@@ -56,8 +56,6 @@ export function makeConfig(formdata: FormData) {
     // const autoWrapETH = formdata.get("autoWrapETH")?.toString().toUpperCase() === "TRUE"
 
     // Safety checks
-    if (!inputToken || !outputToken) throw new Error("Invalid input or output Token(s)!")
-
     if (!rpcUrl) {
         throw new Error("RPC URL is invalid!")
     }
@@ -93,30 +91,6 @@ export function makeConfig(formdata: FormData) {
     }
 
     return config
-}
-
-
-// Helper function - for development only
-// wraps ETH
-export async function wrapETH(wallet: Wallet, eth: bigint) {
-    const wethContract = new ethers.Contract(
-        WETH_CONTRACT_ADDRESS,
-        WETH_ABI,
-        wallet
-    )
-
-    const transaction = {
-        data: wethContract.interface.encodeFunctionData('deposit'),
-        value: eth,
-        from: wallet.address,
-        to: WETH_CONTRACT_ADDRESS,
-        // maxFeePerGas: MAX_FEE_PER_GAS,
-        // maxPriorityFeePerGas: MAX_PRIORITY_FEE_PER_GAS,
-    }
-
-    const tx = await wallet.sendTransaction(transaction)
-    const receipt = await tx.wait();
-    return !(receipt?.status === 0)
 }
 
 // 1 network call

@@ -6,34 +6,7 @@ import { USDC_TOKEN, USDT_TOKEN, WBTC_TOKEN, WETH_TOKEN } from './constants'
 import { displayTrade, toReadableAmount } from './utils'
 import { approvePermit2, getPermitSingle } from './permit2'
 import { createRoute, createTrade } from './v3SinglePoolTrade'
-import { SwapConfiguration, getCurrencyBalance, wrapETH } from './core'
-
-
-async function confirmInputTokens(config: SwapConfiguration, inputTokenBalance: bigint, wallet: Wallet) {
-    // Check if there is enough input Token balance
-    if (inputTokenBalance < config.amountIn) {
-        // We don't have enough tokens to swap
-        const requiredAmount = config.amountIn - inputTokenBalance
-        console.error("Not enough input Tokens!")
-        console.log("Additional amount needed: ", toReadableAmount(requiredAmount, config.inputToken))
-
-        // if input Token is WETH, wrap the required amount of ETH
-        if (config.inputToken.equals(WETH_TOKEN) && config.autoWrapETH) {
-            console.log("Attempting to wrap required ETH")
-            const isSuccess = await wrapETH(wallet, requiredAmount)
-            if (!isSuccess) {
-                console.error("Failed to wrap ETH. Aborting.")
-                return false
-            }
-            console.log("Successfully wrapped required ETH.")
-        } else {
-            console.log("autoWrapETH set to false. Aborting.")
-            return false
-        }
-    }
-
-    return true
-}
+import { SwapConfiguration, getCurrencyBalance } from './core'
 
 
 export async function swapTokens(CurrentConfig: SwapConfiguration, messageArray: Array<string>) {
@@ -53,7 +26,7 @@ export async function swapTokens(CurrentConfig: SwapConfiguration, messageArray:
     if (inputTokenBalance < CurrentConfig.amountIn) {
         throw new Error("Input token balance insufficient!")
     }
-    await approvePermit2(CurrentConfig, wallet)
+    await approvePermit2(CurrentConfig, wallet, messageArray)
 
     // Get the user's balance for output Token
     const outputTokenBalance = await getCurrencyBalance(wallet, CurrentConfig.outputToken)

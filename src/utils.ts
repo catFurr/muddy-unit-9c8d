@@ -1,5 +1,5 @@
 import { Wallet, ethers } from 'ethers'
-import { Token, Currency, TradeType } from '@uniswap/sdk-core'
+import { Token, Currency, TradeType, ChainId } from '@uniswap/sdk-core'
 import { Trade } from '@uniswap/router-sdk'
 
 import {
@@ -22,11 +22,19 @@ export function fromReadableAmount(amount: number, decimals: number) {
 
 export const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
-export function getTokenFromString(value: string | undefined) {
-    const tokensList = [WETH_TOKEN, USDT_TOKEN, USDC_TOKEN, WBTC_TOKEN]
-    return tokensList.find((el) => {
-        return el.address === value || el.symbol === value
+export function getTokenFromAddr(addr: string | undefined, chainid: ChainId) {
+    if (!addr) throw new Error("Invalid Token(s)!")
+    const tokensList = [
+        WETH_TOKEN(chainid),
+        USDT_TOKEN(chainid),
+        USDC_TOKEN(chainid),
+        WBTC_TOKEN(chainid)
+    ]
+    const ret_token = tokensList.find((el) => {
+        return el.address === addr || el.symbol === addr
     })
+    if (ret_token) return ret_token
+    throw new Error("Invalid Token(s)!")
 }
 
 /**

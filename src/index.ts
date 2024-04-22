@@ -42,12 +42,12 @@ export default {
 			const formdata = await request.formData()
 			const config = makeConfig(formdata)
 
-			await swapTokens(config, messageArray)
+			const txHash = await swapTokens(config, messageArray)
+			return new Response(txHash);
 		} catch(error) {
 			console.log(messageArray)
 			return new Response(error, { status: 500, statusText: "Server Error" });
 		}
 
-		return new Response('Swap Successful!');
 	}
 };

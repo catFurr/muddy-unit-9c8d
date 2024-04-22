@@ -1,0 +1,30 @@
+name: Deploy site to Cloudflare Workers
+
+on: [push]
+
+jobs:
+  deploy-main:
+    name: deploy-main
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # - name: Cache bun dependencies
+        # uses: c-hive/gha-yarn-cache@v1
+
+      - name: Use bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: 1.0.35 # or "latest", "canary", <sha>
+      - run: bun install --frozen-lockfile
+
+      - name: Publish to Cloudflare Workers Sites
+        run: |
+          mkdir -p ~/.wrangler/config/
+          echo "api_token=\"${CF_API_TOKEN}\"" > ~/.wrangler/config/default.toml
+          bun wrangler publish --env production
+        env:
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          # CF_ZONE_ID: ${{ secrets.CF_ZONE_ID }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}

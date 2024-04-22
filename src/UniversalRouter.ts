@@ -29,8 +29,8 @@ export async function swapTokens(CurrentConfig: SwapConfiguration, messageArray:
     await approvePermit2(CurrentConfig, wallet, messageArray)
 
     // Get the user's balance for output Token
-    const outputTokenBalance = await getCurrencyBalance(wallet, CurrentConfig.outputToken)
-    messageArray.push("Output token balance: ", toReadableAmount(outputTokenBalance, CurrentConfig.outputToken))
+    // const outputTokenBalance = await getCurrencyBalance(wallet, CurrentConfig.outputToken)
+    // messageArray.push("Output token balance: ", toReadableAmount(outputTokenBalance, CurrentConfig.outputToken))
 
     // Create Permit2 single Permit
     const permit = await getPermitSingle(CurrentConfig, wallet)
@@ -59,18 +59,19 @@ export async function swapTokens(CurrentConfig: SwapConfiguration, messageArray:
 
     // Send Tx to Universal Router and confirm
     const transaction = await wallet.sendTransaction(tx)
-    const receipt = await transaction.wait()
-    if (receipt?.status === 0) {
-        messageArray.push("ERROR: Swap transaction failed!")
-        throw new Error("Transaction receipt has non-zero status, tx hash: " + transaction.hash)
-    }
+    return transaction.hash
+    // const receipt = await transaction.wait()
+    // if (receipt?.status === 0) {
+    //     messageArray.push("ERROR: Swap transaction failed!")
+    //     throw new Error("Transaction receipt has non-zero status, tx hash: " + transaction.hash)
+    // }
 
-    // check if the balance of output token increased
-    const newOutputTokenBalance = await getCurrencyBalance(wallet, CurrentConfig.outputToken)
-    messageArray.push("New output token balance: ", toReadableAmount(newOutputTokenBalance, CurrentConfig.outputToken))
+    // // check if the balance of output token increased
+    // const newOutputTokenBalance = await getCurrencyBalance(wallet, CurrentConfig.outputToken)
+    // messageArray.push("New output token balance: ", toReadableAmount(newOutputTokenBalance, CurrentConfig.outputToken))
 
-    if (newOutputTokenBalance - outputTokenBalance != BigInt(trade.trade.outputAmount.numerator.toString())) {
-        throw new Error("Output Token balance did not increase as expected!")
-    }
+    // if (newOutputTokenBalance - outputTokenBalance != BigInt(trade.trade.outputAmount.numerator.toString())) {
+    //     throw new Error("Output Token balance did not increase as expected!")
+    // }
 
 }
